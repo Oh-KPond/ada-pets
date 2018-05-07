@@ -44,6 +44,15 @@ class PetsControllerTest < ActionDispatch::IntegrationTest
       get pet_path(pets(:two).id)
       must_respond_with :success
     end
+
+    it "returns a :not_found for pets that are not found" do
+    pet = pets(:two)
+    pet.destroy
+
+    get pet_path(pet.id)
+
+    must_respond_with :not_found
+    end
   end
 
   describe "create" do
@@ -55,19 +64,45 @@ class PetsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    # it "Creates a new pet" do
-    #   assert_difference "Pet.count", 1 do
-    #     post pets_url, params: { pet: pet_data }
-    #     assert_response :success
-    #   end
-    #
-    #   body = JSON.parse(response.body)
-    #   body.must_be_kind_of Hash
-    #   body.must_include "id"
-    #
-    #   # Check that the ID matches
-    #   Pet.find(body["id"]).name.must_equal pet_data[:name]
-    # end
+    it "Creates a new pet" do
+
+      proc {
+        post pets_path, params: {pet: pet_data}
+      }.must_change 'Pet.count', 1
+
+      must_respond_with :success
+      # assert_difference "Pet.count", 1 do
+      #   post pets_url, params: { pet: pet_data }
+      #   assert_response :success
+      # end
+      #
+      # body = JSON.parse(response.body)
+      # body.must_be_kind_of Hash
+      # body.must_include "id"
+      #
+      # # Check that the ID matches
+      # Pet.find(body["id"]).name.must_equal pet_data[:name]
+    end
+
+    it "returns a bad_request for bad params data" do
+      not_a_pet ={
+        age: 7,
+        human: "Nope"
+      }
+      proc {
+        post pets_path, params: {pet: not_a_pet}
+      }.wont_change 'Pet.count'
+
+      must_respond_with :bad_request
+
+      body = JSON.parse(response.body)
+      body.must_be_kind_of Hash
+      body.must_include "ok"
+      body["ok"].must_equal false
+      body.must_include "errors"
+      body["errors"].must_include "name"
+
+    end
     #
     # it "Returns an error for an invalid pet" do
     #   bad_data = pet_data.clone()
